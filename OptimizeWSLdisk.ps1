@@ -7,13 +7,14 @@ Stop-Service -Name "wslservice" -Force -ErrorAction SilentlyContinue
 $wslDistros = wsl --list --quiet
 
 foreach ($distro in $wslDistros) {
-    try {
-        # Retrieve the location of the ext4.vhdx file
-        $vhdxPath = (Get-ChildItem -Path HKCU:\Software\Microsoft\Windows\CurrentVersion\Lxss | Where-Object { $_.GetValue("DistributionName") -eq $distro }).GetValue("BasePath") + "\ext4.vhdx"
+    if ($distro -ne "") {
+        try {
+            # Retrieve the location of the ext4.vhdx file
+            $vhdxPath = (Get-ChildItem -Path HKCU:\Software\Microsoft\Windows\CurrentVersion\Lxss | Where-Object { $_.GetValue("DistributionName") -eq $distro }).GetValue("BasePath") + "\ext4.vhdx"
 
-        if ($vhdxPath) {
-            # Create a diskpart script to compact the vdisk
-            $diskpartScript = @"
+            if ($vhdxPath) {
+                # Create a diskpart script to compact the vdisk
+                $diskpartScript = @"
 select vdisk file="$vhdxPath"
 attach vdisk readonly
 compact vdisk
@@ -21,11 +22,13 @@ detach vdisk
 exit
 "@
 
-            # Execute the diskpart script
-            $diskpartScript | diskpart
+                # Execute the diskpart script
+                $diskpartScript | diskpart
+                Write-Host "Succesfully shrink " $distro
+            }
+        } catch {
+            Write-Host "Fail to locate virtual disk of: " + $distro
         }
-    } catch {
-        Write-Host "Fail to locate virtual disk of: " + $distro
     }
 }
 
